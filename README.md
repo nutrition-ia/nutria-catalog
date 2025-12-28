@@ -1,179 +1,219 @@
 # Nutria Food Catalog API
 
-A comprehensive food and nutrition database API built with FastAPI and PostgreSQL with pgvector. Designed to be consumed by AI agents (Mastra.ai) for nutritional assistance.
+Uma API completa de banco de dados de alimentos e nutrição construída com FastAPI e PostgreSQL com pgvector. Projetada para ser consumida por agentes de IA (Mastra.ai) para assistência nutricional.
 
-## Features
+## Funcionalidades
 
-- **Food Search**: Text-based search with multiple filters (category, nutrients, source, verification status)
-- **Nutrition Calculations**: Calculate total nutritional values for food combinations
-- **Multi-source Data**: Support for USDA, TACO, and custom food databases
-- **Semantic Search Ready**: Infrastructure prepared for pgvector-based semantic search (Phase 2)
-- **OpenAPI/Swagger**: Full API documentation available at `/docs`
+- **Busca de Alimentos**: Busca textual com múltiplos filtros (categoria, nutrientes, fonte, status de verificação)
+- **Cálculos Nutricionais**: Calcula valores nutricionais totais para combinações de alimentos
+- **Dados Multi-fonte**: Suporte para bases de dados USDA, TACO e customizadas
+- **Pronto para Busca Semântica**: Infraestrutura preparada para busca semântica baseada em pgvector (Fase 2)
+- **OpenAPI/Swagger**: Documentação completa da API disponível em `/docs`
 
-## Tech Stack
+## Stack Tecnológica
 
-- **Python 3.11** (managed via asdf or pyenv)
-- **FastAPI** - Modern, fast web framework
-- **SQLModel** - SQL database ORM with Pydantic integration
-- **PostgreSQL 15+** with **pgvector** extension
-- **Docker & Docker Compose** - Containerized development
-- **Alembic** - Database migrations
+- **Python 3.11** (gerenciado via asdf ou pyenv)
+- **FastAPI** - Framework web moderno e rápido
+- **SQLModel** - ORM de banco de dados SQL com integração Pydantic
+- **PostgreSQL 15+** com extensão **pgvector**
+- **Docker & Docker Compose** - Desenvolvimento containerizado
+- **Alembic** - Migrações de banco de dados
 
-## Project Structure
+## Estrutura do Projeto
 
 ```
 nutria-catalog/
 ├── app/
 │   ├── __init__.py
-│   ├── main.py                 # FastAPI app and Swagger config
-│   ├── config.py               # Configuration management
-│   ├── database.py             # Database connection
+│   ├── main.py                 # App FastAPI e configuração Swagger
+│   ├── config.py               # Gerenciamento de configurações
+│   ├── database.py             # Conexão com banco de dados
 │   ├── models/
 │   │   ├── __init__.py
-│   │   ├── food.py             # Food and FoodNutrient models
-│   │   └── base.py             # Base models with mixins
+│   │   ├── food.py             # Modelos Food e FoodNutrient
+│   │   └── base.py             # Modelos base com mixins
 │   ├── schemas/
 │   │   ├── __init__.py
-│   │   ├── food.py             # Pydantic schemas
-│   │   └── common.py           # Common schemas (pagination, etc)
+│   │   ├── food.py             # Schemas Pydantic
+│   │   └── common.py           # Schemas comuns (paginação, etc)
 │   ├── api/
 │   │   ├── __init__.py
 │   │   ├── v1/
 │   │   │   ├── __init__.py
-│   │   │   ├── foods.py        # Food search endpoints
-│   │   │   └── nutrition.py    # Nutrition calculation endpoints
-│   │   └── dependencies.py     # FastAPI dependencies
+│   │   │   ├── foods.py        # Endpoints de busca de alimentos
+│   │   │   └── nutrition.py    # Endpoints de cálculo nutricional
+│   │   └── dependencies.py     # Dependências do FastAPI
 │   └── services/
 │       ├── __init__.py
-│       ├── food_service.py     # Food business logic
-│       ├── nutrition_service.py # Nutrition calculations
-│       └── search_service.py   # Semantic search (Phase 2)
-├── alembic/                    # Database migrations
+│       ├── food_service.py     # Lógica de negócio de alimentos
+│       ├── nutrition_service.py # Cálculos nutricionais
+│       └── search_service.py   # Busca semântica (Fase 2)
+├── alembic/                    # Migrações de banco de dados
 │   ├── versions/
 │   └── env.py
 ├── docker/
-│   └── init.sql                # PostgreSQL initialization
+│   └── init.sql                # Inicialização do PostgreSQL
 ├── docker-compose.yml
+├── Makefile                     # Atalhos para comandos comuns
 ├── requirements.txt
 ├── .env.example
 └── README.md
 ```
 
-## Setup Instructions
+## Instruções de Instalação
 
-### Prerequisites
+### Pré-requisitos
 
 - Python 3.11
-- Docker and Docker Compose
-- asdf or pyenv (recommended for Python version management)
+- Docker e Docker Compose
+- asdf ou pyenv (recomendado para gerenciamento de versão do Python)
 
-### Option 1: Setup with asdf (Recommended)
+### Opção 1: Instalação com asdf (Recomendado)
 
-1. **Install asdf** (if not already installed):
+1. **Instalar asdf** (se ainda não estiver instalado):
    ```bash
    git clone https://github.com/asdf-vm/asdf.git ~/.asdf --branch v0.14.0
    echo '. "$HOME/.asdf/asdf.sh"' >> ~/.bashrc
    source ~/.bashrc
    ```
 
-2. **Install Python 3.11 with asdf**:
+2. **Instalar Python 3.11 com asdf**:
    ```bash
    asdf plugin add python
    asdf install python 3.11.7
    asdf local python 3.11.7
    ```
 
-3. **Verify Python version**:
+3. **Verificar versão do Python**:
    ```bash
-   python --version  # Should show Python 3.11.7
+   python --version  # Deve mostrar Python 3.11.7
    ```
 
-### Option 2: Setup with pyenv
+### Opção 2: Instalação com pyenv
 
-1. **Install pyenv** (if not already installed):
+1. **Instalar pyenv** (se ainda não estiver instalado):
    ```bash
    curl https://pyenv.run | bash
    ```
 
-2. **Install Python 3.11**:
+2. **Instalar Python 3.11**:
    ```bash
    pyenv install 3.11.7
    pyenv local 3.11.7
    ```
 
-3. **Verify Python version**:
+3. **Verificar versão do Python**:
    ```bash
-   python --version  # Should show Python 3.11.7
+   python --version  # Deve mostrar Python 3.11.7
    ```
 
-### Installation
+### Instalação Rápida com Makefile
 
-1. **Clone the repository** (if applicable):
+Se você já tem Python 3.11 e Docker instalados, use estes comandos:
+
+```bash
+# 1. Instalar dependências Python
+make install
+
+# 2. Iniciar tudo (Docker + Migrações + Servidor)
+make dev
+```
+
+Pronto! A API estará rodando em http://localhost:8000
+
+### Instalação Manual (Passo a Passo)
+
+1. **Navegar até o diretório do projeto**:
    ```bash
    cd nutria-catalog
    ```
 
-2. **Create and activate virtual environment**:
+2. **Criar e ativar ambiente virtual**:
    ```bash
    python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   source venv/bin/activate  # No Windows: venv\Scripts\activate
    ```
 
-3. **Install dependencies**:
+3. **Instalar dependências**:
    ```bash
    pip install -r requirements.txt
+   # OU use: make install
    ```
 
-4. **Set up environment variables**:
+4. **Configurar variáveis de ambiente**:
    ```bash
    cp .env.example .env
-   # Edit .env if you need to change database credentials
+   # Edite .env se precisar alterar as credenciais do banco
    ```
 
-5. **Start PostgreSQL with Docker**:
+5. **Iniciar PostgreSQL com Docker**:
    ```bash
    docker-compose up -d
+   # OU use: make docker-up
    ```
 
-6. **Wait for PostgreSQL to be ready**:
+6. **Aguardar PostgreSQL estar pronto**:
    ```bash
    docker-compose logs -f postgres
-   # Wait until you see "database system is ready to accept connections"
-   # Press Ctrl+C to exit logs
+   # Aguarde até ver "database system is ready to accept connections"
+   # Pressione Ctrl+C para sair dos logs
    ```
 
-7. **Run database migrations**:
+7. **Executar migrações do banco de dados**:
    ```bash
    alembic upgrade head
+   # OU use: make migrate
    ```
 
-8. **Start the API server**:
+8. **(Opcional) Adicionar dados de exemplo**:
+   ```bash
+   python seed_data.py
+   ```
+
+9. **Iniciar o servidor da API**:
    ```bash
    uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+   # OU use: make run
    ```
 
-9. **Access the API**:
-   - API: http://localhost:8000
-   - Swagger Docs: http://localhost:8000/docs
-   - ReDoc: http://localhost:8000/redoc
+10. **Acessar a API**:
+    - API: http://localhost:8000
+    - Documentação Swagger: http://localhost:8000/docs
+    - Documentação ReDoc: http://localhost:8000/redoc
 
-## API Endpoints
+## Comandos do Makefile
+
+O Makefile fornece atalhos convenientes para tarefas comuns:
+
+```bash
+make help         # Mostra todos os comandos disponíveis
+make install      # Instala dependências Python
+make docker-up    # Inicia containers Docker
+make docker-down  # Para containers Docker
+make migrate      # Executa migrações do banco
+make run          # Inicia o servidor da API
+make dev          # Inicia tudo (docker + migrações + servidor)
+make clean        # Limpa arquivos cache do Python
+make reset-db     # Reseta banco de dados (CUIDADO: apaga dados)
+```
+
+## Endpoints da API
 
 ### Health Check
 
-- `GET /` - API information
-- `GET /health` - Health check
+- `GET /` - Informações da API
+- `GET /health` - Verificação de saúde
 
-### Food Search
+### Busca de Alimentos
 
-**POST /api/v1/foods/search**
+**POST /api/foods/search** ou **POST /api/v1/foods/search**
 
-Search for food items with text queries and optional filters.
+Buscar itens de alimentos com queries de texto e filtros opcionais.
 
-**Request Body:**
+**Corpo da Requisição:**
 ```json
 {
-  "query": "chicken breast",
+  "query": "peito de frango",
   "limit": 10,
   "filters": {
     "category": "protein",
@@ -185,14 +225,14 @@ Search for food items with text queries and optional filters.
 }
 ```
 
-**Response:**
+**Resposta:**
 ```json
 {
   "success": true,
   "foods": [
     {
       "id": "550e8400-e29b-41d4-a716-446655440000",
-      "name": "Chicken Breast, Skinless",
+      "name": "Peito de Frango, Sem Pele",
       "category": "protein",
       "serving_size_g": 100,
       "serving_unit": "g",
@@ -208,13 +248,13 @@ Search for food items with text queries and optional filters.
 }
 ```
 
-### Nutrition Calculation
+### Cálculo Nutricional
 
-**POST /api/v1/nutrition/calculate**
+**POST /api/nutrition/calculate** ou **POST /api/v1/nutrition/calculate**
 
-Calculate total nutritional values for a combination of foods.
+Calcular valores nutricionais totais para uma combinação de alimentos.
 
-**Request Body:**
+**Corpo da Requisição:**
 ```json
 {
   "foods": [
@@ -230,7 +270,7 @@ Calculate total nutritional values for a combination of foods.
 }
 ```
 
-**Response:**
+**Resposta:**
 ```json
 {
   "success": true,
@@ -250,7 +290,7 @@ Calculate total nutritional values for a combination of foods.
   "details": [
     {
       "food_id": "550e8400-e29b-41d4-a716-446655440000",
-      "food_name": "Chicken Breast",
+      "food_name": "Peito de Frango",
       "quantity_g": 150,
       "calories": 247.5,
       "protein_g": 46.5,
@@ -261,195 +301,200 @@ Calculate total nutritional values for a combination of foods.
 }
 ```
 
-## Database Schema
+## Schema do Banco de Dados
 
-### Foods Table
+### Tabela Foods (Alimentos)
 
-| Column | Type | Description |
-|--------|------|-------------|
-| id | UUID | Primary key |
-| name | VARCHAR(255) | Food name |
-| name_normalized | VARCHAR(255) | Normalized name for searching |
-| category | VARCHAR(50) | Food category |
-| serving_size_g | DECIMAL | Default serving size in grams |
-| serving_unit | VARCHAR(20) | Unit of measurement |
-| calorie_per_100g | DECIMAL | Calories per 100g |
-| usda_id | VARCHAR(50) | USDA FoodData Central ID |
-| source | ENUM | Data source (usda, taco, custom) |
-| is_verified | BOOLEAN | Verification status |
-| embedding | VECTOR(384) | Vector embedding for semantic search |
-| created_at | TIMESTAMP | Creation timestamp |
-| updated_at | TIMESTAMP | Update timestamp |
+| Coluna | Tipo | Descrição |
+|--------|------|-----------|
+| id | UUID | Chave primária |
+| name | VARCHAR(255) | Nome do alimento |
+| name_normalized | VARCHAR(255) | Nome normalizado para busca |
+| category | VARCHAR(50) | Categoria do alimento |
+| serving_size_g | DECIMAL | Tamanho da porção padrão em gramas |
+| serving_unit | VARCHAR(20) | Unidade de medida |
+| calorie_per_100g | DECIMAL | Calorias por 100g |
+| usda_id | VARCHAR(50) | ID do USDA FoodData Central |
+| source | ENUM | Fonte dos dados (usda, taco, custom) |
+| is_verified | BOOLEAN | Status de verificação |
+| embedding | VECTOR(384) | Embedding vetorial para busca semântica |
+| created_at | TIMESTAMP | Timestamp de criação |
+| updated_at | TIMESTAMP | Timestamp de atualização |
 
-### Food Nutrients Table
+### Tabela Food Nutrients (Nutrientes dos Alimentos)
 
-| Column | Type | Description |
-|--------|------|-------------|
-| id | UUID | Primary key |
-| food_id | UUID | Foreign key to foods |
-| calories_100g | DECIMAL | Calories per 100g |
-| protein_g_100g | DECIMAL | Protein in grams per 100g |
-| carbs_g_100g | DECIMAL | Carbohydrates in grams per 100g |
-| fat_g_100g | DECIMAL | Fat in grams per 100g |
-| saturated_fat_g_100g | DECIMAL | Saturated fat in grams per 100g |
-| fiber_g_100g | DECIMAL | Fiber in grams per 100g |
-| sugar_g_100g | DECIMAL | Sugar in grams per 100g |
-| sodium_mg_100g | DECIMAL | Sodium in milligrams per 100g |
-| calcium_mg_100g | DECIMAL | Calcium in milligrams per 100g |
-| iron_mg_100g | DECIMAL | Iron in milligrams per 100g |
-| vitamin_c_mg_100g | DECIMAL | Vitamin C in milligrams per 100g |
-| created_at | TIMESTAMP | Creation timestamp |
-| updated_at | TIMESTAMP | Update timestamp |
+| Coluna | Tipo | Descrição |
+|--------|------|-----------|
+| id | UUID | Chave primária |
+| food_id | UUID | Chave estrangeira para foods |
+| calories_100g | DECIMAL | Calorias por 100g |
+| protein_g_100g | DECIMAL | Proteína em gramas por 100g |
+| carbs_g_100g | DECIMAL | Carboidratos em gramas por 100g |
+| fat_g_100g | DECIMAL | Gordura em gramas por 100g |
+| saturated_fat_g_100g | DECIMAL | Gordura saturada em gramas por 100g |
+| fiber_g_100g | DECIMAL | Fibra em gramas por 100g |
+| sugar_g_100g | DECIMAL | Açúcar em gramas por 100g |
+| sodium_mg_100g | DECIMAL | Sódio em miligramas por 100g |
+| calcium_mg_100g | DECIMAL | Cálcio em miligramas por 100g |
+| iron_mg_100g | DECIMAL | Ferro em miligramas por 100g |
+| vitamin_c_mg_100g | DECIMAL | Vitamina C em miligramas por 100g |
+| created_at | TIMESTAMP | Timestamp de criação |
+| updated_at | TIMESTAMP | Timestamp de atualização |
 
-## Database Migrations
+## Migrações de Banco de Dados
 
-### Create a new migration
+### Criar uma nova migração
 
 ```bash
-alembic revision --autogenerate -m "description of changes"
+alembic revision --autogenerate -m "descrição das alterações"
 ```
 
-### Apply migrations
+### Aplicar migrações
 
 ```bash
 alembic upgrade head
+# OU use: make migrate
 ```
 
-### Rollback migration
+### Reverter migração
 
 ```bash
 alembic downgrade -1
 ```
 
-### View migration history
+### Ver histórico de migrações
 
 ```bash
 alembic history
 ```
 
-## Development
+## Desenvolvimento
 
-### Running tests
+### Executar testes
 
 ```bash
-# TODO: Add tests in Phase 2
+# TODO: Adicionar testes na Fase 2
 pytest
 ```
 
-### Code formatting
+### Formatação de código
 
 ```bash
-# Install formatting tools
+# Instalar ferramentas de formatação
 pip install black isort
 
-# Format code
+# Formatar código
 black app/
 isort app/
 ```
 
-### Type checking
+### Verificação de tipos
 
 ```bash
-# Install mypy
+# Instalar mypy
 pip install mypy
 
-# Run type checking
+# Executar verificação de tipos
 mypy app/
 ```
 
-## Docker Commands
+## Comandos Docker
 
-### Start services
+### Iniciar serviços
 
 ```bash
 docker-compose up -d
+# OU use: make docker-up
 ```
 
-### Stop services
+### Parar serviços
 
 ```bash
 docker-compose down
+# OU use: make docker-down
 ```
 
-### View logs
+### Ver logs
 
 ```bash
 docker-compose logs -f
 ```
 
-### Restart PostgreSQL
+### Reiniciar PostgreSQL
 
 ```bash
 docker-compose restart postgres
 ```
 
-### Access PostgreSQL CLI
+### Acessar CLI do PostgreSQL
 
 ```bash
 docker-compose exec postgres psql -U nutriauser -d nutriadb
 ```
 
-## Troubleshooting
+## Solução de Problemas
 
-### PostgreSQL connection issues
+### Problemas de conexão com PostgreSQL
 
-1. Ensure Docker is running:
+1. Verificar se o Docker está rodando:
    ```bash
    docker ps
    ```
 
-2. Check PostgreSQL logs:
+2. Verificar logs do PostgreSQL:
    ```bash
    docker-compose logs postgres
    ```
 
-3. Verify PostgreSQL is healthy:
+3. Verificar se o PostgreSQL está saudável:
    ```bash
    docker-compose exec postgres pg_isready -U nutriauser
    ```
 
-### Migration issues
+### Problemas com migrações
 
-1. Check current migration status:
+1. Verificar status atual da migração:
    ```bash
    alembic current
    ```
 
-2. Reset database (WARNING: This will delete all data):
+2. Resetar banco de dados (ATENÇÃO: Isso irá deletar todos os dados):
    ```bash
    docker-compose down -v
    docker-compose up -d
    alembic upgrade head
+   # OU use: make reset-db
    ```
 
-### Import errors
+### Erros de importação
 
-Ensure you're in the virtual environment and all dependencies are installed:
+Certifique-se de estar no ambiente virtual e que todas as dependências estão instaladas:
 ```bash
 source venv/bin/activate
 pip install -r requirements.txt
+# OU use: make install
 ```
 
-## Future Enhancements (Phase 2)
+## Melhorias Futuras (Fase 2)
 
-- Semantic search using pgvector and sentence-transformers
-- Embedding generation for food descriptions
-- Hybrid search combining text and semantic search
-- Authentication and authorization
+- Busca semântica usando pgvector e sentence-transformers
+- Geração de embeddings para descrições de alimentos
+- Busca híbrida combinando texto e busca semântica
+- Autenticação e autorização
 - Rate limiting
-- Caching layer (Redis)
-- Data import scripts for USDA and TACO databases
-- Comprehensive test suite
-- CI/CD pipeline
+- Camada de cache (Redis)
+- Scripts de importação de dados para bases USDA e TACO
+- Suite de testes abrangente
+- Pipeline de CI/CD
 
-## License
+## Licença
 
-[Add your license here]
+[Adicione sua licença aqui]
 
-## Contributing
+## Contribuindo
 
-[Add contributing guidelines here]
+[Adicione diretrizes de contribuição aqui]
 
-## Contact
+## Contato
 
-[Add contact information here]
+[Adicione informações de contato aqui]
