@@ -1,0 +1,72 @@
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from app.config import settings
+from app.api.v1 import foods, nutrition
+
+app = FastAPI(
+    title=settings.PROJECT_NAME,
+    version=settings.PROJECT_VERSION,
+    description="""
+    Nutria Food Catalog API - A comprehensive food and nutrition database API.
+
+    This API provides:
+    * **Food Search**: Search for foods with text queries and filters
+    * **Nutrition Calculations**: Calculate nutritional values for food combinations
+    * **Semantic Search**: AI-powered semantic search for finding similar foods (coming soon)
+
+    Designed to be consumed by AI agents (Mastra.ai) for nutritional assistance.
+    """,
+    openapi_tags=[
+        {
+            "name": "health",
+            "description": "Health check endpoints"
+        },
+        {
+            "name": "foods",
+            "description": "Food search and retrieval operations"
+        },
+        {
+            "name": "nutrition",
+            "description": "Nutritional calculations and analysis"
+        }
+    ]
+)
+
+# CORS Configuration
+if settings.BACKEND_CORS_ORIGINS:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=[str(origin) for origin in settings.BACKEND_CORS_ORIGINS],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+
+# Include routers with /api/v1 prefix
+app.include_router(foods.router, prefix=f"{settings.API_V1_STR}/foods", tags=["foods"])
+app.include_router(nutrition.router, prefix=f"{settings.API_V1_STR}/nutrition", tags=["nutrition"])
+
+# Also include routers with /api prefix for backward compatibility
+app.include_router(foods.router, prefix="/api/foods", tags=["foods"])
+app.include_router(nutrition.router, prefix="/api/nutrition", tags=["nutrition"])
+
+
+@app.get("/", tags=["health"])
+async def root():
+    """Root endpoint - API information"""
+    return {
+        "message": "Nutria Food Catalog API",
+        "version": settings.PROJECT_VERSION,
+        "docs_url": "/docs",
+        "status": "healthy"
+    }
+
+
+@app.get("/health", tags=["health"])
+async def health_check():
+    """Health check endpoint"""
+    return {
+        "status": "healthy",
+        "service": settings.PROJECT_NAME,
+        "version": settings.PROJECT_VERSION
+    }

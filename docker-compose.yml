@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg15
+    container_name: nutria-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-nutriauser}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-nutriapass}
+      POSTGRES_DB: ${POSTGRES_DB:-nutriadb}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-nutriauser} -d ${POSTGRES_DB:-nutriadb}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - nutria-network
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  nutria-network:
+    driver: bridge
