@@ -10,7 +10,8 @@ class Settings(BaseSettings):
         env_file=".env",
         env_file_encoding="utf-8",
         case_sensitive=True,
-        extra="ignore"  # Ignora variáveis extras no .env (POSTGRES_USER, etc.)
+        # ignora variaveis extra do .env por ex: POSTGRES_USER
+        extra="ignore", 
     )
 
     # API Configuration
@@ -35,7 +36,7 @@ class Settings(BaseSettings):
         if not v:
             return []
         if isinstance(v, str):
-            # Se for string separada por vírgula
+            # separada por vírgula se for string
             return [i.strip() for i in v.split(",") if i.strip()]
         elif isinstance(v, list):
             return v
