@@ -50,7 +50,7 @@ def seed_sample_data():
                     "calcium_mg_100g": Decimal("15"),
                     "iron_mg_100g": Decimal("1.04"),
                     "vitamin_c_mg_100g": Decimal("0"),
-                }
+                },
             },
             {
                 "name": "Brown Rice, Cooked",
@@ -73,7 +73,7 @@ def seed_sample_data():
                     "calcium_mg_100g": Decimal("10"),
                     "iron_mg_100g": Decimal("0.56"),
                     "vitamin_c_mg_100g": Decimal("0"),
-                }
+                },
             },
             {
                 "name": "Broccoli, Raw",
@@ -96,7 +96,7 @@ def seed_sample_data():
                     "calcium_mg_100g": Decimal("47"),
                     "iron_mg_100g": Decimal("0.73"),
                     "vitamin_c_mg_100g": Decimal("89.2"),
-                }
+                },
             },
             {
                 "name": "Sweet Potato, Baked",

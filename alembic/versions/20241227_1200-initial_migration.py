@@ -35,7 +35,7 @@ def upgrade() -> None:
         sa.Column('serving_unit', sa.String(length=20), nullable=False),
         sa.Column('calorie_per_100g', sa.Numeric(precision=10, scale=2), nullable=True),
         sa.Column('usda_id', sa.String(length=50), nullable=True),
-        sa.Column('source', sa.Enum('usda', 'taco', 'custom', name='foodsource'), nullable=False),
+        sa.Column('source', sa.Enum('USDA', 'TACO', 'CUSTOM', name='foodsource'), nullable=False),
         sa.Column('is_verified', sa.Boolean(), nullable=False, server_default='false'),
         sa.Column('embedding', Vector(384), nullable=True),
         sa.Column('created_at', sa.DateTime(), nullable=False),
