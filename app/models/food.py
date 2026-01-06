@@ -11,9 +11,9 @@ from app.models.base import TimestampMixin, UUIDMixin
 
 class FoodSource(str, enum.Enum):
     """Source of food data"""
-    USDA = "usda"
-    TACO = "taco"
-    CUSTOM = "custom"
+    USDA = "USDA"
+    TACO = "TACO"
+    CUSTOM = "CUSTOM"
 
 
 class Food(UUIDMixin, TimestampMixin, SQLModel, table=True):
