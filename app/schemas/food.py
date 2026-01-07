@@ -169,3 +169,44 @@ class NutritionCalculationResponse(BaseModel):
     success: bool = True
     total: NutritionTotals
     details: List[NutritionDetail]
+
+
+# ========== Similar Foods Schemas ==========
+
+class SimilarFoodRequest(BaseModel):
+    """Request schema for finding similar foods"""
+    food_id: UUID = Field(..., description="UUID of the reference food")
+    limit: int = Field(default=10, ge=1, le=50, description="Number of similar foods to return")
+    same_category: bool = Field(default=False, description="Only return foods from same category")
+    tolerance: Decimal = Field(
+        default=Decimal("0.3"),
+        ge=0,
+        le=1,
+        description="Tolerance for nutritional similarity (0.3 = 30% difference allowed)"
+    )
+
+
+class SimilarFoodItem(BaseModel):
+    """A similar food item with similarity score"""
+    id: UUID
+    name: str
+    category: Optional[str]
+    calorie_per_100g: Optional[Decimal]
+    protein_g_100g: Optional[Decimal]
+    carbs_g_100g: Optional[Decimal]
+    fat_g_100g: Optional[Decimal]
+    fiber_g_100g: Optional[Decimal]
+    similarity_score: Decimal = Field(..., description="Similarity score (0-1, higher is more similar)")
+    source: FoodSource
+    is_verified: bool
+
+    class Config:
+        from_attributes = True
+
+
+class SimilarFoodsResponse(BaseModel):
+    """Response schema for similar foods search"""
+    success: bool = True
+    reference_food: FoodSimpleResponse
+    similar_foods: List[SimilarFoodItem]
+    count: int
