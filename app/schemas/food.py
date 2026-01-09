@@ -173,6 +173,8 @@ class NutritionCalculationResponse(BaseModel):
 
 # ========== Similar Foods Schemas ==========
 
+# é para a validação de alimentos similares na api request/response
+
 class SimilarFoodRequest(BaseModel):
     """Request schema for finding similar foods"""
     food_id: UUID = Field(..., description="UUID of the reference food")
