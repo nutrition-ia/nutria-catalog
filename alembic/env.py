@@ -8,8 +8,8 @@ from pathlib import Path
 # Add the project root to the Python path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from app.config import settings
-from app.database import engine
+from app.core.config import settings
+from app.database.database import engine
 from sqlmodel import SQLModel
 
 # Import all models here to ensure they are registered with SQLModel

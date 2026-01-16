@@ -9,7 +9,7 @@ from uuid import uuid4
 
 from sqlmodel import Session, select
 
-from app.database import engine
+from app.database.database import engine
 from app.models.food import Food, FoodNutrient, FoodSource
 
 

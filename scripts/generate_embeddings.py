@@ -1,4 +1,4 @@
-from app.database import engine
+from app.database.database import engine
 from app.models.food import Food, FoodNutrient
 from app.services.embedding_service import EmbeddingService
 from sqlmodel import Session, select
