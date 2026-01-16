@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlmodel import Session
 
 from app.api.dependencies import get_db
-from app.services.nutrition_service import NutritionService
+from app.services import nutrition_service
 from app.schemas.food import (
     NutritionCalculationRequest,
     NutritionCalculationResponse,
@@ -92,11 +92,8 @@ async def calculate_nutrition(
     }
     ```
     """
-    service = NutritionService(db)
-
     try:
-        # Calculate nutrition
-        totals, details = service.calculate_nutrition(request.foods)
+        totals, details = nutrition_service.calculate_nutrition(db, request.foods)
 
         return NutritionCalculationResponse(
             success=True,

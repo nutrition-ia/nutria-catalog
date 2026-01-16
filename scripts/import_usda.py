@@ -18,7 +18,7 @@ from typing import Optional
 
 from sqlmodel import Session
 
-from app.database import engine
+from app.database.database import engine
 from app.models.food import Food, FoodNutrient, FoodSource
 
 # Configuration

@@ -174,16 +174,10 @@ class NutritionCalculationResponse(BaseModel):
 # ========== Similar Foods Schemas ==========
 
 class SimilarFoodRequest(BaseModel):
-    """Request schema for finding similar foods"""
+    """Request schema for finding similar foods using vector similarity"""
     food_id: UUID = Field(..., description="UUID of the reference food")
     limit: int = Field(default=10, ge=1, le=50, description="Number of similar foods to return")
     same_category: bool = Field(default=False, description="Only return foods from same category")
-    tolerance: Decimal = Field(
-        default=Decimal("0.3"),
-        ge=0,
-        le=1,
-        description="Tolerance for nutritional similarity (0.3 = 30% difference allowed)"
-    )
 
 
 class SimilarFoodItem(BaseModel):

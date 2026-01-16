@@ -1,5 +1,5 @@
 from sqlmodel import create_engine, Session, SQLModel
-from app.config import settings
+from app.core.config import settings
 
 # Create database engine
 engine = create_engine(
