@@ -119,9 +119,10 @@ def get_food_with_nutrients(session: Session, food_id: UUID) -> Optional[Food]:
             .join(FoodNutrient, Food.id == FoodNutrient.food_id, isouter=True)
         )
         return session.exec(statement).first()
-    finally:
-        session.close()
-
+    except Exception as e:
+        logger.error(f"Error fetching food with nutrients for ID {food_id}: {e}")
+        return None
+    
 def find_similar_foods(
     session: Session,
     food_id: UUID,

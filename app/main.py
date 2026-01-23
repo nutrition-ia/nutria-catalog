@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
-from app.api.v1 import foods, nutrition
+from app.api.v1 import foods, nutrition, recommendations
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
@@ -28,6 +28,10 @@ app = FastAPI(
         {
             "name": "nutrition",
             "description": "Nutritional calculations and analysis"
+        },
+        {
+            "name": "recommendations",
+            "description": "Personalized food recommendations based on user profile"
         }
     ]
 )
@@ -45,10 +49,12 @@ if settings.BACKEND_CORS_ORIGINS:
 # Include routers with /api/v1 prefix
 app.include_router(foods.router, prefix=f"{settings.API_V1_STR}/foods", tags=["foods"])
 app.include_router(nutrition.router, prefix=f"{settings.API_V1_STR}/nutrition", tags=["nutrition"])
+app.include_router(recommendations.router, prefix=f"{settings.API_V1_STR}/recommendations", tags=["recommendations"])
 
 # Also include routers with /api prefix for backward compatibility
 app.include_router(foods.router, prefix="/api/foods", tags=["foods"])
 app.include_router(nutrition.router, prefix="/api/nutrition", tags=["nutrition"])
+app.include_router(recommendations.router, prefix="/api/recommendations", tags=["recommendations"])
 
 
 @app.get("/", tags=["health"])

@@ -146,7 +146,7 @@ async def find_similar_foods(
     )
 
     # Build reference food response
-    ref_nutrients = ref_food.nutrients if hasattr(ref_food, 'nutrients') else None
+    ref_nutrients = ref_food.nutrients if hasattr(ref_food, 'nutrients') else Exception (f"Food {ref_food.id} has no nutrients")
     reference_response = FoodSimpleResponse(
         id=ref_food.id,
         name=ref_food.name,
