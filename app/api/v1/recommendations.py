@@ -1,9 +1,9 @@
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlmodel import Session, select
 from uuid import UUID
 
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlmodel import Session, select
+
 from app.api.dependencies import get_db
-from app.services import recomendation_service
 from app.models.user import UserProfile
 from app.schemas.recommendation import (
     RecommendationRequest,
@@ -11,28 +11,26 @@ from app.schemas.recommendation import (
     RecommendedFoodItem,
     UserFiltersResponse,
 )
+from app.services import recomendation_service
 
 router = APIRouter()
 
 
 def _get_user_profile(db: Session, user_id: UUID) -> UserProfile:
     """Get user profile or raise 404"""
-    profile = db.exec(
-        select(UserProfile).where(UserProfile.user_id == user_id)
-    ).first()
+    profile = db.exec(select(UserProfile).where(UserProfile.user_id == user_id)).first()
 
     if not profile:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"User profile with ID {user_id} not found"
+            detail=f"User profile with ID {user_id} not found",
         )
     return profile
 
 
-@router.post("", response_model=RecommendationResponse)
+@router.post("/", response_model=RecommendationResponse)
 async def get_recommendations(
-    request: RecommendationRequest,
-    db: Session = Depends(get_db)
+    request: RecommendationRequest, db: Session = Depends(get_db)
 ) -> RecommendationResponse:
     """
     Get personalized food recommendations for a user.
@@ -66,16 +64,11 @@ async def get_recommendations(
 
     if request.category:
         foods = recomendation_service.get_foods_by_category(
-            session=db,
-            profile=profile,
-            category=request.category,
-            limit=request.limit
+            session=db, profile=profile, category=request.category, limit=request.limit
         )
     else:
         foods = recomendation_service.recommend_foods(
-            session=db,
-            profile=profile,
-            limit=request.limit
+            session=db, profile=profile, limit=request.limit
         )
 
     recommended_items = []
@@ -91,7 +84,7 @@ async def get_recommendations(
             "is_verified": food.is_verified,
         }
 
-        if hasattr(food, 'nutrients') and food.nutrients:
+        if hasattr(food, "nutrients") and food.nutrients:
             item_dict["protein_g_100g"] = food.nutrients.protein_g_100g
             item_dict["carbs_g_100g"] = food.nutrients.carbs_g_100g
             item_dict["fat_g_100g"] = food.nutrients.fat_g_100g
@@ -108,14 +101,13 @@ async def get_recommendations(
         success=True,
         foods=recommended_items,
         count=len(recommended_items),
-        filters_applied=filters_applied
+        filters_applied=filters_applied,
     )
 
 
 @router.get("/{user_id}/filters", response_model=UserFiltersResponse)
 async def get_user_filters(
-    user_id: UUID,
-    db: Session = Depends(get_db)
+    user_id: UUID, db: Session = Depends(get_db)
 ) -> UserFiltersResponse:
     """
     Get the dietary filters for a specific user.
@@ -138,5 +130,5 @@ async def get_user_filters(
         user_id=user_id,
         dietary_restrictions=profile.dietary_restrictions or [],
         allergies=profile.allergies or [],
-        disliked_foods=profile.disliked_foods or []
+        disliked_foods=profile.disliked_foods or [],
     )

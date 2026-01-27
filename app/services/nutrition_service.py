@@ -1,18 +1,19 @@
-from typing import List
-from sqlmodel import Session, select
-from uuid import UUID
 from decimal import Decimal
+from typing import List
+from uuid import UUID
+
+from sqlmodel import Session, select
 
 from app.models.food import Food, FoodNutrient
 from app.schemas.food import (
     FoodQuantity,
-    NutritionTotals,
     NutritionDetail,
+    NutritionTotals,
 )
 
+
 def calculate_nutrition(
-    session: Session,
-    food_quantities: List[FoodQuantity]
+    session: Session, food_quantities: List[FoodQuantity]
 ) -> tuple[NutritionTotals, List[NutritionDetail]]:
     """
     Calculate total nutrition for a list of foods with quantities
@@ -22,58 +23,57 @@ def calculate_nutrition(
     Returns:
         Tuple of (NutritionTotals, List[NutritionDetail])
     """
-    
-    food_ids= [fq.food_id for fq in food_quantities]
-    
-    statement={
+
+    food_ids = [fq.food_id for fq in food_quantities]
+
+    statement = (
         select(Food, FoodNutrient)
-        .join(FoodNutrient, Food.id == FoodNutrient.food_id, isouter=True)
-        .where(Food.id.in_(food_ids))
-    }
-    results= session.exec(statement).all()
+        .join(FoodNutrient, Food.id == FoodNutrient.food_id, isouter=True)  # type: ignore[arg-type]
+        .where(Food.id.in_(food_ids))  # type: ignore[union-attr]
+    )
+    results = session.exec(statement).all()
     food_map = {food.id: (food, nutrients) for food, nutrients in results}
-    
+
     totals = NutritionTotals()
     details = []
-    
+
     for fq in food_quantities:
         food, nutrients = food_map.get(fq.food_id, (None, None))
-        
+
         if not food:
             continue
-        
-        
-        multiplier = fq.quantity / Decimal('100')
-        
-        calories = Decimal('0')
-        protein = Decimal('0')
-        carbs = Decimal('0')
-        fat = Decimal('0')
-        saturated_fat = Decimal('0')
-        fiber = Decimal('0')
-        sugar = Decimal('0')
-        sodium = Decimal('0')
-        calcium = Decimal('0')
-        iron = Decimal('0')
-        vitamin_c = Decimal('0')
-        
- 
+
+        multiplier = fq.quantity / Decimal("100")
+
+        calories = Decimal("0")
+        protein = Decimal("0")
+        carbs = Decimal("0")
+        fat = Decimal("0")
+        saturated_fat = Decimal("0")
+        fiber = Decimal("0")
+        sugar = Decimal("0")
+        sodium = Decimal("0")
+        calcium = Decimal("0")
+        iron = Decimal("0")
+        vitamin_c = Decimal("0")
+
         if nutrients:
-            calories = (nutrients.calories_100g or Decimal('0')) * multiplier
-            protein = (nutrients.protein_g_100g or Decimal('0')) * multiplier
-            carbs = (nutrients.carbs_g_100g or Decimal('0')) * multiplier
-            fat = (nutrients.fat_g_100g or Decimal('0')) * multiplier
-            saturated_fat = (nutrients.saturated_fat_g_100g or Decimal('0')) * multiplier
-            fiber = (nutrients.fiber_g_100g or Decimal('0')) * multiplier
-            sugar = (nutrients.sugar_g_100g or Decimal('0')) * multiplier
-            sodium = (nutrients.sodium_mg_100g or Decimal('0')) * multiplier
-            calcium = (nutrients.calcium_mg_100g or Decimal('0')) * multiplier
-            iron = (nutrients.iron_mg_100g or Decimal('0')) * multiplier
-            vitamin_c = (nutrients.vitamin_c_mg_100g or Decimal('0')) * multiplier
+            calories = (nutrients.calories_100g or Decimal("0")) * multiplier
+            protein = (nutrients.protein_g_100g or Decimal("0")) * multiplier
+            carbs = (nutrients.carbs_g_100g or Decimal("0")) * multiplier
+            fat = (nutrients.fat_g_100g or Decimal("0")) * multiplier
+            saturated_fat = (
+                nutrients.saturated_fat_g_100g or Decimal("0")
+            ) * multiplier
+            fiber = (nutrients.fiber_g_100g or Decimal("0")) * multiplier
+            sugar = (nutrients.sugar_g_100g or Decimal("0")) * multiplier
+            sodium = (nutrients.sodium_mg_100g or Decimal("0")) * multiplier
+            calcium = (nutrients.calcium_mg_100g or Decimal("0")) * multiplier
+            iron = (nutrients.iron_mg_100g or Decimal("0")) * multiplier
+            vitamin_c = (nutrients.vitamin_c_mg_100g or Decimal("0")) * multiplier
         elif food.calorie_per_100g:
-            
-        # Fallback to food's calorie_per_100g if nutrients not available
-         calories = food.calorie_per_100g * multiplier
+            # Fallback to food's calorie_per_100g if nutrients not available
+            calories = food.calorie_per_100g * multiplier
 
             # Add to totals
         totals.calories += calories
@@ -88,7 +88,7 @@ def calculate_nutrition(
         totals.iron_mg += iron
         totals.vitamin_c_mg += vitamin_c
 
-            # Add to details
+        # Add to details
         details.append(
             NutritionDetail(
                 food_id=food.id,
@@ -101,9 +101,10 @@ def calculate_nutrition(
             )
         )
 
-        return totals, details       
-    
-def get_nutrient_by_food_id(session:Session, food_id:UUID) -> FoodNutrient | None:
+    return totals, details
+
+
+def get_nutrient_by_food_id(session: Session, food_id: UUID) -> FoodNutrient | None:
     """
     Get nutrient information for a specific food
 

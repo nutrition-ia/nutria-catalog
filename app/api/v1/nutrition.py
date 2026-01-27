@@ -2,19 +2,18 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlmodel import Session
 
 from app.api.dependencies import get_db
-from app.services import nutrition_service
 from app.schemas.food import (
     NutritionCalculationRequest,
     NutritionCalculationResponse,
 )
+from app.services import nutrition_service
 
 router = APIRouter()
 
 
 @router.post("/calculate", response_model=NutritionCalculationResponse)
 async def calculate_nutrition(
-    request: NutritionCalculationRequest,
-    db: Session = Depends(get_db)
+    request: NutritionCalculationRequest, db: Session = Depends(get_db)
 ) -> NutritionCalculationResponse:
     """
     Calculate total nutrition for a list of foods
@@ -95,13 +94,9 @@ async def calculate_nutrition(
     try:
         totals, details = nutrition_service.calculate_nutrition(db, request.foods)
 
-        return NutritionCalculationResponse(
-            success=True,
-            total=totals,
-            details=details
-        )
+        return NutritionCalculationResponse(success=True, total=totals, details=details)
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error calculating nutrition: {str(e)}"
+            detail=f"Error calculating nutrition: {str(e)}",
         )

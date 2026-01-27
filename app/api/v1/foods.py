@@ -1,25 +1,25 @@
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlmodel import Session
 from typing import List
 
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlmodel import Session
+
 from app.api.dependencies import get_db
-from app.services import food_service
 from app.schemas.food import (
     FoodSearchRequest,
     FoodSearchResponse,
     FoodSimpleResponse,
-    SimilarFoodRequest,
     SimilarFoodItem,
+    SimilarFoodRequest,
     SimilarFoodsResponse,
 )
+from app.services import food_service
 
 router = APIRouter()
 
 
 @router.post("/search", response_model=FoodSearchResponse)
 async def search_foods(
-    request: FoodSearchRequest,
-    db: Session = Depends(get_db)
+    request: FoodSearchRequest, db: Session = Depends(get_db)
 ) -> FoodSearchResponse:
     """
     Search for food items
@@ -56,10 +56,7 @@ async def search_foods(
     ```
     """
     foods = food_service.search_foods(
-        session=db,
-        query=request.query,
-        limit=request.limit,
-        filters=request.filters
+        session=db, query=request.query, limit=request.limit, filters=request.filters
     )
 
     # Convert to simple response format with nutrients
@@ -77,24 +74,19 @@ async def search_foods(
         }
 
         # Add nutrient info if available
-        if hasattr(food, 'nutrients') and food.nutrients:
+        if hasattr(food, "nutrients") and food.nutrients:
             food_dict["protein_g_100g"] = food.nutrients.protein_g_100g
             food_dict["carbs_g_100g"] = food.nutrients.carbs_g_100g
             food_dict["fat_g_100g"] = food.nutrients.fat_g_100g
 
         simple_foods.append(FoodSimpleResponse(**food_dict))
 
-    return FoodSearchResponse(
-        success=True,
-        foods=simple_foods,
-        count=len(simple_foods)
-    )
+    return FoodSearchResponse(success=True, foods=simple_foods, count=len(simple_foods))
 
 
 @router.post("/similar", response_model=SimilarFoodsResponse)
 async def find_similar_foods(
-    request: SimilarFoodRequest,
-    db: Session = Depends(get_db)
+    request: SimilarFoodRequest, db: Session = Depends(get_db)
 ) -> SimilarFoodsResponse:
     """
     Find similar foods using vector similarity search (pgvector).
@@ -134,7 +126,7 @@ async def find_similar_foods(
     if not ref_food:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Food with ID {request.food_id} not found"
+            detail=f"Food with ID {request.food_id} not found",
         )
 
     # Find similar foods using vector search
@@ -142,11 +134,11 @@ async def find_similar_foods(
         session=db,
         food_id=request.food_id,
         limit=request.limit,
-        same_category=request.same_category
+        same_category=request.same_category,
     )
 
     # Build reference food response
-    ref_nutrients = ref_food.nutrients if hasattr(ref_food, 'nutrients') else Exception (f"Food {ref_food.id} has no nutrients")
+    ref_nutrients = ref_food.nutrients if hasattr(ref_food, "nutrients") else None
     reference_response = FoodSimpleResponse(
         id=ref_food.id,
         name=ref_food.name,
@@ -164,24 +156,26 @@ async def find_similar_foods(
     # Build similar foods response
     similar_foods = []
     for food, score in similar_results:
-        nutrients = food.nutrients if hasattr(food, 'nutrients') else None
-        similar_foods.append(SimilarFoodItem(
-            id=food.id,
-            name=food.name,
-            category=food.category,
-            calorie_per_100g=food.calorie_per_100g,
-            protein_g_100g=nutrients.protein_g_100g if nutrients else None,
-            carbs_g_100g=nutrients.carbs_g_100g if nutrients else None,
-            fat_g_100g=nutrients.fat_g_100g if nutrients else None,
-            fiber_g_100g=nutrients.fiber_g_100g if nutrients else None,
-            similarity_score=score,
-            source=food.source,
-            is_verified=food.is_verified,
-        ))
+        nutrients = food.nutrients if hasattr(food, "nutrients") else None
+        similar_foods.append(
+            SimilarFoodItem(
+                id=food.id,
+                name=food.name,
+                category=food.category,
+                calorie_per_100g=food.calorie_per_100g,
+                protein_g_100g=nutrients.protein_g_100g if nutrients else None,
+                carbs_g_100g=nutrients.carbs_g_100g if nutrients else None,
+                fat_g_100g=nutrients.fat_g_100g if nutrients else None,
+                fiber_g_100g=nutrients.fiber_g_100g if nutrients else None,
+                similarity_score=score,
+                source=food.source,
+                is_verified=food.is_verified,
+            )
+        )
 
     return SimilarFoodsResponse(
         success=True,
         reference_food=reference_response,
         similar_foods=similar_foods,
-        count=len(similar_foods)
+        count=len(similar_foods),
     )
