@@ -15,3 +15,11 @@ pydantic-settings>=2.1.0
 
 # Additional utilities
 python-multipart>=0.0.6
+
+# Computer Vision and Image Processing
+torch>=2.0.0  # PyTorch for deep learning
+torchvision>=0.15.0  # Vision models
+detectron2 @ git+https://github.com/facebookresearch/detectron2.git  # DETIC base
+pillow>=10.0.0  # Image processing
+numpy>=1.24.0  # Array operations
+opencv-python>=4.8.0  # OpenCV for image processing
