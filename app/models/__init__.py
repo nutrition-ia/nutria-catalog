@@ -1,5 +1,7 @@
-from app.models.food import Food, FoodNutrient, FoodSource
 from app.models.base import TimestampMixin, UUIDMixin
+from app.models.food import Food, FoodNutrient, FoodSource
+from app.models.tracking import DailyStats, MealLog, MealType
+from app.models.user import ActivityLevel, DietGoal, MealPlan, UserProfile
 
 __all__ = [
     "Food",
@@ -7,4 +9,11 @@ __all__ = [
     "FoodSource",
     "TimestampMixin",
     "UUIDMixin",
+    "MealLog",
+    "DailyStats",
+    "MealType",
+    "UserProfile",
+    "MealPlan",
+    "DietGoal",
+    "ActivityLevel",
 ]
