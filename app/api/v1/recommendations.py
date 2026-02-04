@@ -42,7 +42,8 @@ async def get_recommendations(
 
     **Request Body:**
     - `user_id`: UUID of the user profile (required)
-    - `limit`: Maximum number of recommendations (default: 50, max: 100)
+    - `limit`: Maximum number of recommendations (default: 10, max: 100)
+      - **Note for AI agents**: Keep limit ≤20 for small context models (e.g., gpt-4.1-mini with 8k tokens)
     - `category`: Optional category filter (e.g., "protein", "vegetable")
 
     **Response:**

@@ -8,6 +8,14 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+# Tenta importar line_profiler, mas funciona sem ele também
+try:
+    profile = __builtins__.profile  # type: ignore
+except AttributeError:
+    # Se não estiver rodando com kernprof, profile não faz nada
+    def profile(func):
+        return func
+
 
  #Thresholds da ANVISA para classificação nutricional.
     # Proteínas
@@ -29,6 +37,7 @@ LOW_SODIUM = Decimal("120")       # Baixo teor de sódio
 # Calorias (não é ANVISA oficial, mas útil)
 LOW_CALORIE = Decimal("40")       # Baixa caloria
 
+@profile
 def generate_embedding(text: str) -> List[float]:
     """
     Gera embedding para um texto usando sentence-transformers.
@@ -48,6 +57,7 @@ def generate_embedding(text: str) -> List[float]:
         logger.error(f"Erro ao gerar embedding: {e}")
         raise
 
+@profile
 def generate_food_description(food: "Food", nutrients: "FoodNutrient") -> str:
     """
     Cria descrição rica do alimento para embedding baseada nos thresholds ANVISA.
@@ -70,10 +80,11 @@ def generate_food_description(food: "Food", nutrients: "FoodNutrient") -> str:
                 parts.append("Fonte de proteína.")
                 
         #Fibras
-        if nutrients.fiber_g_100g >= HIGH_FIBER:
-            parts.append("alto teor de fibras")
-        elif nutrients.fiber_g_100g >= SOURCE_FIBER:
-            parts.append("fonte de fibras")
+        if nutrients.fiber_g_100g is not None:
+            if nutrients.fiber_g_100g >= HIGH_FIBER:
+                parts.append("alto teor de fibras")
+            elif nutrients.fiber_g_100g >= SOURCE_FIBER:
+                parts.append("fonte de fibras")
 
         # Gordura
         if nutrients.fat_g_100g is not None:
@@ -102,6 +113,7 @@ def generate_food_description(food: "Food", nutrients: "FoodNutrient") -> str:
 
     return " ".join(parts).strip().replace("  ", " ")
 
+@profile
 def generate_food_embedding(food: "Food", nutrients: "FoodNutrient") -> List[float]:
     """
     Gera embedding vetorial para um alimento baseado em sua descrição enriquecida.
