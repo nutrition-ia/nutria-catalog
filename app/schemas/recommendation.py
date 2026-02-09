@@ -9,7 +9,7 @@ from app.models.food import FoodSource
 class RecommendationRequest(BaseModel):
     """Request schema for food recommendations"""
     user_id: UUID = Field(..., description="UUID of the user profile")
-    limit: int = Field(default=50, ge=1, le=100, description="Maximum number of recommendations")
+    limit: int = Field(default=10, ge=1, le=100, description="Maximum number of recommendations (default: 10 for AI-friendly responses)")
     category: Optional[str] = Field(None, description="Filter by food category")
 
 
