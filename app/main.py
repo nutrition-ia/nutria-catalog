@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
-from app.api.v1 import foods, nutrition, recommendations, tracking, users
+from app.api.v1 import foods, meal_plans, nutrition, recommendations, tracking, users
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
@@ -40,6 +40,10 @@ app = FastAPI(
         {
             "name": "users",
             "description": "User profile management"
+        },
+        {
+            "name": "meal-plans",
+            "description": "Meal plan management and diet creation"
         }
     ]
 )
@@ -60,6 +64,7 @@ app.include_router(nutrition.router, prefix=f"{settings.API_V1_STR}/nutrition", 
 app.include_router(recommendations.router, prefix=f"{settings.API_V1_STR}/recommendations", tags=["recommendations"])
 app.include_router(tracking.router, prefix=f"{settings.API_V1_STR}/tracking", tags=["tracking"])
 app.include_router(users.router, prefix=f"{settings.API_V1_STR}/users", tags=["users"])
+app.include_router(meal_plans.router, prefix=f"{settings.API_V1_STR}/meal-plans", tags=["meal-plans"])
 
 # Also include routers with /api prefix for backward compatibility
 app.include_router(foods.router, prefix="/api/foods", tags=["foods"])
@@ -67,6 +72,7 @@ app.include_router(nutrition.router, prefix="/api/nutrition", tags=["nutrition"]
 app.include_router(recommendations.router, prefix="/api/recommendations", tags=["recommendations"])
 app.include_router(tracking.router, prefix="/api/tracking", tags=["tracking"])
 app.include_router(users.router, prefix="/api/users", tags=["users"])
+app.include_router(meal_plans.router, prefix="/api/meal-plans", tags=["meal-plans"])
 
 
 @app.get("/", tags=["health"])

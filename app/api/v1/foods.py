@@ -84,6 +84,109 @@ async def search_foods(
     return FoodSearchResponse(success=True, foods=simple_foods, count=len(simple_foods))
 
 
+@router.post("/search-by-embedding", response_model=SimilarFoodsResponse)
+async def search_foods_by_embedding(
+    request: FoodSearchRequest, db: Session = Depends(get_db)
+) -> SimilarFoodsResponse:
+    """
+    Search for foods using semantic similarity (embedding-based search).
+
+    This endpoint generates an embedding for the search query and finds foods
+    with similar embeddings using cosine similarity (pgvector). More effective
+    than text-based search for complex descriptions like "chicken in creamy sauce".
+
+    **How it works:**
+    1. Generates embedding vector for your search query
+    2. Compares against all food embeddings in database using cosine distance
+    3. Returns top matches ordered by similarity score (0-1, higher is better)
+
+    **Request Body:**
+    - `query`: Search string in English (required)
+    - `limit`: Maximum number of results (default: 10, max: 50)
+    - `filters`: Optional filters (same as /search endpoint)
+
+    **Response:**
+    - `success`: Boolean indicating success
+    - `reference_food`: Not used (null) - kept for API compatibility
+    - `similar_foods`: Array of matching foods with similarity scores
+    - `count`: Number of results found
+
+    **Use Cases:**
+    - Complex food descriptions: "grilled chicken with herbs"
+    - Misspellings or variations: "chiken", "pollo"
+    - Semantic matching: "protein source" finds chicken, beef, eggs
+    - Cross-language: embeddings can match similar concepts
+
+    **Example Request:**
+    ```json
+    {
+        "query": "chicken in creamy sauce",
+        "limit": 5,
+        "filters": {
+            "category": "protein",
+            "verified_only": true
+        }
+    }
+    ```
+
+    **Example Response:**
+    ```json
+    {
+        "success": true,
+        "reference_food": null,
+        "similar_foods": [
+            {
+                "id": "uuid",
+                "name": "Chicken, creamy sauce",
+                "similarity_score": 0.9234,
+                ...
+            }
+        ],
+        "count": 5
+    }
+    ```
+    """
+    # Use embedding-based search
+    similar_results = food_service.search_foods_by_embedding(
+        session=db,
+        query=request.query,
+        limit=request.limit,
+        filters=request.filters,
+    )
+
+    # Build similar foods response
+    similar_foods = []
+    for food, score in similar_results:
+        # Get nutrients if available
+        nutrients = None
+        if hasattr(food, "nutrients"):
+            nutrients = food.nutrients
+
+        similar_foods.append(
+            SimilarFoodItem(
+                id=food.id,
+                name=food.name,
+                category=food.category,
+                calorie_per_100g=food.calorie_per_100g,
+                protein_g_100g=nutrients.protein_g_100g if nutrients else None,
+                carbs_g_100g=nutrients.carbs_g_100g if nutrients else None,
+                fat_g_100g=nutrients.fat_g_100g if nutrients else None,
+                fiber_g_100g=nutrients.fiber_g_100g if nutrients else None,
+                similarity_score=score,
+                source=food.source,
+                is_verified=food.is_verified,
+            )
+        )
+
+    # Reference food is null since we're searching by text, not by food_id
+    return SimilarFoodsResponse(
+        success=True,
+        reference_food=None,  # type: ignore
+        similar_foods=similar_foods,
+        count=len(similar_foods),
+    )
+
+
 @router.post("/similar", response_model=SimilarFoodsResponse)
 async def find_similar_foods(
     request: SimilarFoodRequest, db: Session = Depends(get_db)
