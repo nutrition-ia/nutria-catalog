@@ -123,6 +123,86 @@ def get_food_with_nutrients(session: Session, food_id: UUID) -> Optional[Food]:
         logger.error(f"Error fetching food with nutrients for ID {food_id}: {e}")
         return None
     
+def search_foods_by_embedding(
+    session: Session,
+    query: str,
+    limit: int = 10,
+    filters: Optional[FoodSearchFilters] = None
+) -> List[tuple[Food, float]]:
+    """
+    Busca alimentos usando similaridade de embeddings (busca semântica).
+
+    Gera embedding da query de busca e encontra alimentos com embeddings
+    similares usando cosine distance (pgvector). Mais efetivo que busca textual
+    para nomes complexos ou descritivos (ex: "chicken in creamy sauce").
+
+    Args:
+        session: Database session
+        query: Search query string (ex: "grilled chicken", "white rice")
+        limit: Maximum number of results to return
+        filters: Optional filters for category, nutrients, etc.
+
+    Returns:
+        List of tuples (Food, similarity_score) ordered by similarity
+
+    Example:
+        results = search_foods_by_embedding(session, "chicken in creamy sauce", limit=5)
+        for food, score in results:
+            print(f"{food.name}: {score:.2f}")
+    """
+    from app.services.embedding_service import generate_embedding
+
+    # Gera embedding da query
+    logger.info(f"Generating embedding for query: '{query}'")
+    query_embedding = generate_embedding(query)
+
+    # Busca por similaridade usando pgvector cosine_distance
+    statement = select(
+        Food,
+        Food.embedding.cosine_distance(query_embedding).label("distance")
+    ).where(Food.embedding.isnot(None))
+
+    # Aplicar filtros opcionais
+    if filters:
+        if filters.category:
+            statement = statement.where(Food.category == filters.category)
+
+        if filters.source:
+            statement = statement.where(Food.source == filters.source)
+
+        if filters.verified_only:
+            statement = statement.where(Food.is_verified == True)
+
+        # Filtros de nutrientes requerem join
+        if filters.min_protein is not None or filters.max_calories is not None:
+            statement = statement.join(FoodNutrient, Food.id == FoodNutrient.food_id, isouter=True)
+
+            if filters.min_protein is not None:
+                statement = statement.where(FoodNutrient.protein_g_100g >= filters.min_protein)
+
+            if filters.max_calories is not None:
+                statement = statement.where(
+                    or_(
+                        Food.calorie_per_100g <= filters.max_calories,
+                        FoodNutrient.calories_100g <= filters.max_calories
+                    )
+                )
+
+    # Ordena por similaridade (menor distance = maior similaridade)
+    statement = statement.order_by("distance").limit(limit)
+
+    results = session.exec(statement).all()
+
+    # Converte distance (0-2) para similarity (0-1): similarity = 1 - distance
+    similar_foods = [(food, round(1 - distance, 4)) for food, distance in results]
+
+    logger.info(f"Found {len(similar_foods)} foods similar to '{query}'")
+    if similar_foods:
+        logger.debug(f"Top match: {similar_foods[0][0].name} (score: {similar_foods[0][1]})")
+
+    return similar_foods
+
+
 def find_similar_foods(
     session: Session,
     food_id: UUID,
