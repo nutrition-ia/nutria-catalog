@@ -17,6 +17,7 @@ from app.schemas.tracking import (
     NutritionProgress,
     WeeklyStatsResponse,
 )
+from app.services.nutrition_calculator import DEFAULT_TARGETS, calculate_targets
 from app.services.nutrition_service import calculate_nutrition
 
 
@@ -66,16 +67,27 @@ def log_meal(session: Session, request: MealLogRequest) -> MealLog:
     )
 
     session.add(meal_log)
-    session.commit()
-    session.refresh(meal_log)
 
-    # Update daily stats
-    _update_daily_stats(session, request.user_id, meal_log.consumed_at.date())
+    try:
+        # Flush to get the meal_log ID without committing
+        session.flush()
+
+        # Update daily stats within the same transaction
+        _update_daily_stats(session, request.user_id, meal_log.consumed_at.date())
+
+        # Single commit for both meal log and daily stats
+        session.commit()
+        session.refresh(meal_log)
+    except Exception:
+        session.rollback()
+        raise
 
     return meal_log
 
 
-def get_daily_summary(session: Session, user_id: UUID, target_date: date) -> DailySummaryResponse:
+def get_daily_summary(
+    session: Session, user_id: UUID, target_date: date
+) -> DailySummaryResponse:
     """
     Get daily nutrition summary for a user
 
@@ -109,16 +121,16 @@ def get_daily_summary(session: Session, user_id: UUID, target_date: date) -> Dai
         select(UserProfile).where(UserProfile.user_id == user_id)
     ).first()
 
-    # Default targets if profile doesn't exist
-    target_calories = 2000.0
-    target_protein = 150.0
-    target_carbs = 250.0
-    target_fat = 67.0
-
+    # Calculate personalized targets from profile
     if profile:
-        # TODO: Calculate targets based on profile
-        # For now, use defaults or profile values if available
-        pass
+        targets = calculate_targets(profile)
+    else:
+        targets = DEFAULT_TARGETS
+
+    target_calories = targets.calories
+    target_protein = targets.protein_g
+    target_carbs = targets.carbs_g
+    target_fat = targets.fat_g
 
     # Calculate progress percentages
     progress = NutritionProgress(
@@ -270,6 +282,12 @@ def _update_daily_stats(session: Session, user_id: UUID, target_date: date) -> N
         .where(DailyStats.date == target_date)
     ).first()
 
+    # Calculate personalized targets
+    if profile:
+        targets = calculate_targets(profile)
+    else:
+        targets = DEFAULT_TARGETS
+
     if daily_stat:
         # Update existing
         daily_stat.total_calories = total_calories
@@ -279,6 +297,10 @@ def _update_daily_stats(session: Session, user_id: UUID, target_date: date) -> N
         daily_stat.total_fiber_g = total_fiber if total_fiber > 0 else None
         daily_stat.total_sodium_mg = total_sodium if total_sodium > 0 else None
         daily_stat.num_meals = len(meals)
+        daily_stat.target_calories = targets.calories
+        daily_stat.target_protein_g = targets.protein_g
+        daily_stat.target_carbs_g = targets.carbs_g
+        daily_stat.target_fat_g = targets.fat_g
         daily_stat.updated_at = datetime.utcnow()
     else:
         # Create new
@@ -292,9 +314,13 @@ def _update_daily_stats(session: Session, user_id: UUID, target_date: date) -> N
             total_fiber_g=total_fiber if total_fiber > 0 else None,
             total_sodium_mg=total_sodium if total_sodium > 0 else None,
             num_meals=len(meals),
-            target_calories=2000.0,  # Default, should come from profile
-            target_protein_g=150.0,  # Default, should come from profile
+            target_calories=targets.calories,
+            target_protein_g=targets.protein_g,
+            target_carbs_g=targets.carbs_g,
+            target_fat_g=targets.fat_g,
         )
         session.add(daily_stat)
 
-    session.commit()
+    # Use flush instead of commit — the caller (log_meal) handles the final commit.
+    # When called standalone (e.g. recalculation), the caller should commit.
+    session.flush()

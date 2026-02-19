@@ -3,7 +3,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlmodel import Session, select
 
-from app.api.dependencies import get_db
+from app.api.dependencies import get_current_user_id, get_db
 from app.models.user import UserProfile
 from app.schemas.recommendation import (
     RecommendationRequest,
@@ -28,40 +28,20 @@ def _get_user_profile(db: Session, user_id: UUID) -> UserProfile:
     return profile
 
 
-@router.post("/", response_model=RecommendationResponse)
+@router.post("", response_model=RecommendationResponse)
 async def get_recommendations(
-    request: RecommendationRequest, db: Session = Depends(get_db)
+    request: RecommendationRequest,
+    db: Session = Depends(get_db),
+    current_user_id: str = Depends(get_current_user_id),
 ) -> RecommendationResponse:
     """
-    Get personalized food recommendations for a user.
+    Get personalized food recommendations for the authenticated user.
 
-    This endpoint returns foods that are safe and suitable for the user based on:
-    - **Dietary restrictions** (vegetarian, vegan, gluten-free, etc.)
-    - **Allergies** (peanuts, lactose, gluten, etc.)
-    - **Disliked foods** (foods the user doesn't want to see)
-
-    **Request Body:**
-    - `user_id`: UUID of the user profile (required)
-    - `limit`: Maximum number of recommendations (default: 10, max: 100)
-      - **Note for AI agents**: Keep limit ≤20 for small context models (e.g., gpt-4.1-mini with 8k tokens)
-    - `category`: Optional category filter (e.g., "protein", "vegetable")
-
-    **Response:**
-    - `success`: Boolean indicating success
-    - `foods`: Array of recommended food items
-    - `count`: Number of recommendations returned
-    - `filters_applied`: Summary of user restrictions applied
-
-    **Example Request:**
-    ```json
-    {
-        "user_id": "uuid-here",
-        "limit": 20,
-        "category": "protein"
-    }
-    ```
+    The user_id from the request body is overridden with the authenticated user's ID.
     """
-    profile = _get_user_profile(db, request.user_id)
+    # Override with authenticated user
+    user_uuid = UUID(current_user_id)
+    profile = _get_user_profile(db, user_uuid)
 
     if request.category:
         foods = recomendation_service.get_foods_by_category(
@@ -106,29 +86,19 @@ async def get_recommendations(
     )
 
 
-@router.get("/{user_id}/filters", response_model=UserFiltersResponse)
+@router.get("/filters", response_model=UserFiltersResponse)
 async def get_user_filters(
-    user_id: UUID, db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user_id: str = Depends(get_current_user_id),
 ) -> UserFiltersResponse:
     """
-    Get the dietary filters for a specific user.
-
-    This endpoint returns the user's dietary restrictions, allergies,
-    and disliked foods that are used to filter recommendations.
-
-    **Path Parameters:**
-    - `user_id`: UUID of the user profile
-
-    **Response:**
-    - `user_id`: The user's UUID
-    - `dietary_restrictions`: List of dietary restrictions
-    - `allergies`: List of allergies
-    - `disliked_foods`: List of disliked foods
+    Get dietary filters for the authenticated user.
     """
-    profile = _get_user_profile(db, user_id)
+    user_uuid = UUID(current_user_id)
+    profile = _get_user_profile(db, user_uuid)
 
     return UserFiltersResponse(
-        user_id=user_id,
+        user_id=user_uuid,
         dietary_restrictions=profile.dietary_restrictions or [],
         allergies=profile.allergies or [],
         disliked_foods=profile.disliked_foods or [],
