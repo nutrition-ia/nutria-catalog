@@ -1,6 +1,7 @@
 from typing import List, Union
-from pydantic_settings import BaseSettings, SettingsConfigDict
+
 from pydantic import PostgresDsn, field_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
@@ -11,7 +12,7 @@ class Settings(BaseSettings):
         env_file_encoding="utf-8",
         case_sensitive=True,
         # ignora variaveis extra do .env por ex: POSTGRES_USER
-        extra="ignore", 
+        extra="ignore",
     )
 
     # API Configuration
@@ -26,6 +27,12 @@ class Settings(BaseSettings):
 
     # Database Configuration
     DATABASE_URL: PostgresDsn
+
+    # JWT Configuration - validação via JWKS do frontend
+    JWKS_URL: str = "http://localhost:3000/api/auth/jwks"
+    JWT_ISSUER: str = "http://localhost:3000"
+    JWT_AUDIENCE: str = "nutria"
+    JWT_ALGORITHM: str = "EdDSA"
 
     # CORS Configuration - usando str para evitar JSON parsing automático
     BACKEND_CORS_ORIGINS: Union[List[str], str] = ""

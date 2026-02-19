@@ -1,58 +1,45 @@
+from datetime import datetime
 from uuid import UUID
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlmodel import Session, select
 
-from app.api.dependencies import get_db
-from app.schemas.user import UserProfileCreate, UserProfileResponse
+from app.api.dependencies import get_current_user_id, get_db
 from app.models.user import UserProfile
-from datetime import datetime
+from app.schemas.user import UserProfileCreate, UserProfileResponse
 
 router = APIRouter()
 
 
-@router.post("/profiles", response_model=UserProfileResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/profiles", response_model=UserProfileResponse, status_code=status.HTTP_201_CREATED
+)
 async def create_user_profile(
-    profile: UserProfileCreate, db: Session = Depends(get_db)
+    profile: UserProfileCreate,
+    db: Session = Depends(get_db),
+    current_user_id: str = Depends(get_current_user_id),
 ) -> UserProfileResponse:
     """
-    Create a new user profile with preferences and restrictions
+    Create a new user profile for the authenticated user.
 
-    This endpoint creates a nutritional profile for a user including:
-    - Personal information (name, age, weight, height)
-    - Activity level and diet goals
-    - Dietary restrictions (vegetarian, vegan, etc.)
-    - Food allergies
-    - Disliked foods
-    - Preferred cuisines
-
-    **Request Body:**
-    - `user_id`: UUID of the user (required)
-    - `name`: User's name (required)
-    - `age`: User's age (required)
-    - `weight_kg`: Weight in kg (optional)
-    - `height_cm`: Height in cm (optional)
-    - `activity_level`: Activity level (optional)
-    - `diet_goal`: Diet goal (optional)
-    - `dietary_restrictions`: List of dietary restrictions (optional)
-    - `allergies`: List of allergies (optional)
-    - `disliked_foods`: List of disliked foods (optional)
-    - `preferred_cuisines`: List of preferred cuisines (optional)
-
-    **Response:**
-    - Returns the created profile with all fields
+    The user_id is taken from the JWT token, overriding any user_id in the request body.
     """
     try:
+        user_uuid = UUID(current_user_id)
+
         # Check if profile already exists
-        existing = db.get(UserProfile, profile.user_id)
+        existing = db.exec(
+            select(UserProfile).where(UserProfile.user_id == user_uuid)
+        ).first()
         if existing:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Perfil já existe para o usuário {profile.user_id}",
+                detail=f"Perfil já existe para o usuário {user_uuid}",
             )
 
-        # Create new profile
+        # Create new profile with authenticated user_id
         db_profile = UserProfile(
-            user_id=profile.user_id,
+            user_id=user_uuid,
             name=profile.name,
             age=profile.age,
             weight_kg=profile.weight_kg,
@@ -82,12 +69,33 @@ async def create_user_profile(
         )
 
 
+@router.get("/profiles/me", response_model=UserProfileResponse)
+async def get_my_profile(
+    db: Session = Depends(get_db),
+    current_user_id: str = Depends(get_current_user_id),
+) -> UserProfileResponse:
+    """
+    Get the authenticated user's profile.
+    """
+    user_uuid = UUID(current_user_id)
+    statement = select(UserProfile).where(UserProfile.user_id == user_uuid)
+    profile = db.exec(statement).first()
+    if not profile:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Perfil não encontrado para o usuário {user_uuid}",
+        )
+    return profile
+
+
 @router.get("/profiles/{user_id}", response_model=UserProfileResponse)
 async def get_user_profile(
     user_id: UUID, db: Session = Depends(get_db)
 ) -> UserProfileResponse:
     """
-    Get a user profile by user_id
+    Get a user profile by user_id.
+
+    This endpoint is public (used by backend services with JWT forwarding).
     """
     statement = select(UserProfile).where(UserProfile.user_id == user_id)
     profile = db.exec(statement).first()
