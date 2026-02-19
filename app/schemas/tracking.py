@@ -47,6 +47,26 @@ class MealLogRequest(BaseModel):
         return v
 
 
+class MealLogUpdate(BaseModel):
+    """Schema for updating a meal log (all fields optional)"""
+
+    meal_type: Optional[MealType] = Field(None, description="Type of meal")
+    foods: Optional[List[FoodLogItem]] = Field(
+        None, min_length=1, description="List of foods consumed"
+    )
+    consumed_at: Optional[datetime] = Field(
+        None, description="When the meal was consumed"
+    )
+    notes: Optional[str] = Field(None, max_length=500, description="User notes")
+
+    @field_validator("foods")
+    @classmethod
+    def foods_not_empty(cls, v: Optional[List[FoodLogItem]]) -> Optional[List[FoodLogItem]]:
+        if v is not None and not v:
+            raise ValueError("Foods list cannot be empty if provided")
+        return v
+
+
 class MealLogResponse(BaseModel):
     """Response schema for a meal log"""
 

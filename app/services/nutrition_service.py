@@ -12,6 +12,24 @@ from app.schemas.food import (
 )
 
 
+def validate_food_ids(session: Session, food_ids: List[UUID]) -> tuple[bool, List[UUID]]:
+    """
+    Validate that all food IDs exist in the database
+
+    Args:
+        session: Database session
+        food_ids: List of food IDs to validate
+
+    Returns:
+        Tuple of (all_exist: bool, missing_ids: List[UUID])
+    """
+    statement = select(Food.id).where(Food.id.in_(food_ids))  # type: ignore[union-attr]
+    existing_ids = set(session.exec(statement).all())
+    missing_ids = [fid for fid in food_ids if fid not in existing_ids]
+
+    return len(missing_ids) == 0, missing_ids
+
+
 def calculate_nutrition(
     session: Session, food_quantities: List[FoodQuantity]
 ) -> tuple[NutritionTotals, List[NutritionDetail]]:

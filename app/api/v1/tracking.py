@@ -8,6 +8,7 @@ from app.api.dependencies import get_current_user_id, get_db
 from app.schemas.tracking import (
     DailySummaryResponse,
     MealLogRequest,
+    MealLogUpdate,
     MealLogResponse,
     WeeklyStatsResponse,
 )
@@ -44,6 +45,71 @@ async def log_meal(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error logging meal: {str(e)}",
+        )
+
+
+@router.put("/meals/{meal_id}", response_model=MealLogResponse)
+async def update_meal(
+    meal_id: UUID,
+    updates: MealLogUpdate,
+    db: Session = Depends(get_db),
+    current_user_id: str = Depends(get_current_user_id),
+) -> MealLogResponse:
+    """
+    Update a meal log entry.
+
+    Only the authenticated user who created the meal can update it.
+    Nutrition totals are automatically recalculated if foods are updated.
+    """
+    try:
+        updated_meal = tracking_service.update_meal(
+            db, meal_id, UUID(current_user_id), updates
+        )
+        if not updated_meal:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Meal log {meal_id} not found or you don't have permission to update it",
+            )
+        return updated_meal
+    except HTTPException:
+        raise
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error updating meal: {str(e)}",
+        )
+
+
+@router.delete("/meals/{meal_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_meal(
+    meal_id: UUID,
+    db: Session = Depends(get_db),
+    current_user_id: str = Depends(get_current_user_id),
+) -> None:
+    """
+    Delete a meal log entry.
+
+    Only the authenticated user who created the meal can delete it.
+    Daily stats will be automatically recalculated.
+    """
+    try:
+        success = tracking_service.delete_meal(db, meal_id, UUID(current_user_id))
+        if not success:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Meal log {meal_id} not found or you don't have permission to delete it",
+            )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error deleting meal: {str(e)}",
         )
 
 

@@ -242,3 +242,76 @@ class SimilarFoodsResponse(BaseModel):
     reference_food: FoodSimpleResponse
     similar_foods: List[SimilarFoodItem]
     count: int
+
+
+# ========== Image Analysis Schemas ==========
+
+
+class ImageAnalysisRequest(BaseModel):
+    """Request schema for food image analysis"""
+
+    image: str = Field(
+        ...,
+        description="Base64-encoded image (with or without data:image prefix)"
+    )
+    top_k_per_food: int = Field(
+        default=3,
+        ge=1,
+        le=10,
+        description="Number of catalog matches to return per detected food"
+    )
+    confidence_threshold: float = Field(
+        default=0.5,
+        ge=0.1,
+        le=1.0,
+        description="Minimum confidence threshold for DETIC detection (0-1)"
+    )
+
+    @field_validator("image")
+    @classmethod
+    def image_not_empty(cls, v: str) -> str:
+        if not v.strip():
+            raise ValueError("Image data cannot be empty")
+        return v.strip()
+
+
+class CatalogMatch(BaseModel):
+    """A catalog food item matched to a detected food"""
+
+    id: str = Field(..., description="UUID of the food in catalog")
+    name: str
+    similarity: float = Field(..., description="Similarity score (0-1)")
+    category: Optional[str]
+    calories_per_100g: Optional[float]
+    serving_size_g: float
+    serving_unit: str
+    source: FoodSource
+    is_verified: bool
+
+
+class DetectedFoodMatch(BaseModel):
+    """A detected food with its catalog matches"""
+
+    detected_name: str = Field(..., description="Name of the food detected by DETIC")
+    matches: List[CatalogMatch] = Field(
+        ..., description="Catalog foods matching this detection"
+    )
+
+
+class ImageAnalysisResponse(BaseModel):
+    """Response schema for food image analysis"""
+
+    success: bool = True
+    detected_foods: List[str] = Field(
+        ..., description="Names of foods detected in the image"
+    )
+    catalog_matches: List[DetectedFoodMatch] = Field(
+        ..., description="Catalog matches for each detected food"
+    )
+    total_detected: int = Field(..., description="Total number of unique foods detected")
+    total_catalog_matches: int = Field(
+        ..., description="Total number of catalog matches found"
+    )
+    message: Optional[str] = Field(
+        None, description="Optional message (e.g., when no foods detected)"
+    )

@@ -6,7 +6,7 @@ from sqlmodel import Session, select
 
 from app.api.dependencies import get_current_user_id, get_db
 from app.models.user import UserProfile
-from app.schemas.user import UserProfileCreate, UserProfileResponse
+from app.schemas.user import UserProfileCreate, UserProfileUpdate, UserProfileResponse
 
 router = APIRouter()
 
@@ -86,6 +86,91 @@ async def get_my_profile(
             detail=f"Perfil não encontrado para o usuário {user_uuid}",
         )
     return profile
+
+
+@router.put("/profiles/me", response_model=UserProfileResponse)
+async def update_my_profile(
+    updates: UserProfileUpdate,
+    db: Session = Depends(get_db),
+    current_user_id: str = Depends(get_current_user_id),
+) -> UserProfileResponse:
+    """
+    Update the authenticated user's profile.
+
+    Only provided fields will be updated (partial update).
+    """
+    try:
+        user_uuid = UUID(current_user_id)
+
+        # Get existing profile
+        profile = db.exec(
+            select(UserProfile).where(UserProfile.user_id == user_uuid)
+        ).first()
+
+        if not profile:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Perfil não encontrado para o usuário {user_uuid}",
+            )
+
+        # Update only provided fields
+        update_data = updates.model_dump(exclude_unset=True)
+        for field, value in update_data.items():
+            setattr(profile, field, value)
+
+        profile.updated_at = datetime.utcnow()
+
+        db.add(profile)
+        db.commit()
+        db.refresh(profile)
+
+        return profile
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Erro ao atualizar perfil: {str(e)}",
+        )
+
+
+@router.delete("/profiles/me", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_my_profile(
+    db: Session = Depends(get_db),
+    current_user_id: str = Depends(get_current_user_id),
+) -> None:
+    """
+    Delete the authenticated user's profile.
+
+    This will also delete related data (meal logs, daily stats, meal plans).
+    """
+    try:
+        user_uuid = UUID(current_user_id)
+
+        # Get existing profile
+        profile = db.exec(
+            select(UserProfile).where(UserProfile.user_id == user_uuid)
+        ).first()
+
+        if not profile:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Perfil não encontrado para o usuário {user_uuid}",
+            )
+
+        # Delete profile (cascade will handle related data if configured)
+        db.delete(profile)
+        db.commit()
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Erro ao deletar perfil: {str(e)}",
+        )
 
 
 @router.get("/profiles/{user_id}", response_model=UserProfileResponse)

@@ -1,4 +1,5 @@
 from typing import List
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlmodel import Session
@@ -8,11 +9,13 @@ from app.schemas.food import (
     FoodSearchRequest,
     FoodSearchResponse,
     FoodSimpleResponse,
+    ImageAnalysisRequest,
+    ImageAnalysisResponse,
     SimilarFoodItem,
     SimilarFoodRequest,
     SimilarFoodsResponse,
 )
-from app.services import food_service
+from app.services import food_service, food_analysis_service
 
 router = APIRouter()
 
@@ -82,6 +85,53 @@ async def search_foods(
         simple_foods.append(FoodSimpleResponse(**food_dict))
 
     return FoodSearchResponse(success=True, foods=simple_foods, count=len(simple_foods))
+
+
+@router.get("/{food_id}", response_model=FoodSimpleResponse)
+async def get_food_by_id(
+    food_id: UUID, db: Session = Depends(get_db)
+) -> FoodSimpleResponse:
+    """
+    Get a single food item by ID with full nutritional information.
+
+    **Path Parameters:**
+    - `food_id`: UUID of the food item
+
+    **Response:**
+    - Food object with complete nutritional data
+
+    **Example:**
+    ```
+    GET /api/v1/foods/550e8400-e29b-41d4-a716-446655440000
+    ```
+    """
+    food = food_service.get_food_with_nutrients(db, food_id)
+
+    if not food:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Alimento com ID {food_id} não encontrado",
+        )
+
+    # Build response with nutrients
+    food_dict = {
+        "id": food.id,
+        "name": food.name,
+        "category": food.category,
+        "serving_size_g": food.serving_size_g,
+        "serving_unit": food.serving_unit,
+        "calorie_per_100g": food.calorie_per_100g,
+        "source": food.source,
+        "is_verified": food.is_verified,
+    }
+
+    # Add nutrient info if available
+    if hasattr(food, "nutrients") and food.nutrients:
+        food_dict["protein_g_100g"] = food.nutrients.protein_g_100g
+        food_dict["carbs_g_100g"] = food.nutrients.carbs_g_100g
+        food_dict["fat_g_100g"] = food.nutrients.fat_g_100g
+
+    return FoodSimpleResponse(**food_dict)
 
 
 @router.post("/search-by-embedding", response_model=SimilarFoodsResponse)
@@ -282,3 +332,113 @@ async def find_similar_foods(
         similar_foods=similar_foods,
         count=len(similar_foods),
     )
+
+
+@router.post("/analyze", response_model=ImageAnalysisResponse)
+async def analyze_food_image(
+    request: ImageAnalysisRequest, db: Session = Depends(get_db)
+) -> ImageAnalysisResponse:
+    """
+    Analyze a food image using DETIC (Detecting Twenty-thousand Classes) and match
+    with catalog foods using semantic embeddings.
+
+    **How it works:**
+    1. **DETIC Detection**: Open-vocabulary object detection identifies foods in the image
+       - Supports 21,000+ categories using CLIP-based embeddings
+       - Custom food vocabulary optimized for common foods (fruits, vegetables, proteins, etc.)
+       - Returns confidence scores for each detection
+
+    2. **Semantic Matching**: For each detected food, generates embeddings and searches
+       the catalog using vector similarity (cosine distance via pgvector)
+       - Matches similar foods even with different names (e.g., "apple" → "Maçã Gala")
+       - Returns top-k most similar catalog items per detection
+
+    3. **Smart Filtering**: Combines visual detection with nutritional similarity
+
+    **Request Body:**
+    - `image`: Base64-encoded image (with or without data:image prefix)
+    - `top_k_per_food`: Number of catalog matches per detected food (default: 3, max: 10)
+    - `confidence_threshold`: Minimum DETIC confidence (default: 0.5, range: 0.1-1.0)
+
+    **Response:**
+    - `success`: Boolean indicating success
+    - `detected_foods`: List of food names detected by DETIC (e.g., ["banana", "apple"])
+    - `catalog_matches`: Array of matches for each detected food
+    - `total_detected`: Total number of unique foods detected
+    - `total_catalog_matches`: Total catalog matches found
+    - `message`: Optional message (e.g., when no foods detected)
+
+    **Use Cases:**
+    - Meal logging: Take a photo of your plate and auto-populate food entries
+    - Recipe analysis: Identify ingredients from a recipe photo
+    - Nutrition estimation: Quick calorie/macro estimates from food photos
+
+    **Requirements:**
+    - DETIC model must be installed and configured (set DETIC_MODEL_PATH env var)
+    - pgvector extension enabled in PostgreSQL
+    - Food embeddings pre-generated in the catalog
+
+    **Fallback Behavior:**
+    - If DETIC is not available, returns empty detections with success=true
+    - If no foods detected, returns empty catalog_matches with appropriate message
+
+    **Example Request:**
+    ```json
+    {
+        "image": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEA...",
+        "top_k_per_food": 3,
+        "confidence_threshold": 0.5
+    }
+    ```
+
+    **Example Response:**
+    ```json
+    {
+        "success": true,
+        "detected_foods": ["banana", "apple"],
+        "catalog_matches": [
+            {
+                "detected_name": "banana",
+                "matches": [
+                    {
+                        "id": "uuid-here",
+                        "name": "Banana Prata",
+                        "similarity": 0.95,
+                        "category": "frutas",
+                        "calories_per_100g": 89,
+                        "serving_size_g": 100,
+                        "serving_unit": "g",
+                        "source": "taco",
+                        "is_verified": true
+                    }
+                ]
+            }
+        ],
+        "total_detected": 2,
+        "total_catalog_matches": 6
+    }
+    ```
+
+    **Performance Notes:**
+    - First request: ~2-5s (model loading + inference)
+    - Subsequent requests: ~0.5-1.5s (model cached, only inference)
+    - Embedding search: O(n) with pgvector index, very fast even with large catalogs
+    """
+    try:
+        result = await food_analysis_service.analyze_food_image(
+            session=db,
+            base64_image=request.image,
+            top_k_per_food=request.top_k_per_food,
+            confidence_threshold=request.confidence_threshold,
+        )
+        return ImageAnalysisResponse(**result)
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Erro na análise de imagem: {str(e)}",
+        )

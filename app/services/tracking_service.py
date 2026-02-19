@@ -13,12 +13,13 @@ from app.schemas.tracking import (
     DailySummaryResponse,
     DayStats,
     MealLogRequest,
+    MealLogUpdate,
     MealSummary,
     NutritionProgress,
     WeeklyStatsResponse,
 )
 from app.services.nutrition_calculator import DEFAULT_TARGETS, calculate_targets
-from app.services.nutrition_service import calculate_nutrition
+from app.services.nutrition_service import calculate_nutrition, validate_food_ids
 
 
 def log_meal(session: Session, request: MealLogRequest) -> MealLog:
@@ -31,7 +32,27 @@ def log_meal(session: Session, request: MealLogRequest) -> MealLog:
 
     Returns:
         Created MealLog object
+
+    Raises:
+        ValueError: If any food_id doesn't exist or quantities are invalid
     """
+    # Validate food IDs exist
+    food_ids = [food.food_id for food in request.foods]
+    all_exist, missing_ids = validate_food_ids(session, food_ids)
+
+    if not all_exist:
+        raise ValueError(
+            f"Os seguintes alimentos não foram encontrados: {', '.join(str(id) for id in missing_ids)}"
+        )
+
+    # Validate quantities are reasonable (max 10kg per food item)
+    MAX_QUANTITY = 10000  # 10kg in grams
+    for food in request.foods:
+        if food.quantity_g > MAX_QUANTITY:
+            raise ValueError(
+                f"Quantidade muito alta: {food.quantity_g}g. Máximo permitido: {MAX_QUANTITY}g (10kg)"
+            )
+
     # Convert FoodLogItem to FoodQuantity for nutrition calculation
     food_quantities = [
         FoodQuantity(food_id=food.food_id, quantity=food.quantity_g)
@@ -83,6 +104,135 @@ def log_meal(session: Session, request: MealLogRequest) -> MealLog:
         raise
 
     return meal_log
+
+
+def update_meal(
+    session: Session, meal_id: UUID, user_id: UUID, updates: MealLogUpdate
+) -> Optional[MealLog]:
+    """
+    Update an existing meal log entry
+
+    Args:
+        session: Database session
+        meal_id: ID of the meal log to update
+        user_id: UUID of the authenticated user (for ownership validation)
+        updates: Partial update data
+
+    Returns:
+        Updated MealLog object or None if not found/unauthorized
+    """
+    # Get existing meal log
+    meal_log = session.get(MealLog, meal_id)
+
+    if not meal_log or meal_log.user_id != user_id:
+        return None
+
+    # Store original date for stats recalculation
+    original_date = meal_log.consumed_at.date()
+
+    try:
+        # Update simple fields
+        update_data = updates.model_dump(exclude_unset=True, exclude={"foods"})
+        for field, value in update_data.items():
+            setattr(meal_log, field, value)
+
+        # If foods were updated, recalculate nutrition
+        if updates.foods is not None:
+            # Validate food IDs exist
+            food_ids = [food.food_id for food in updates.foods]
+            all_exist, missing_ids = validate_food_ids(session, food_ids)
+
+            if not all_exist:
+                raise ValueError(
+                    f"Os seguintes alimentos não foram encontrados: {', '.join(str(id) for id in missing_ids)}"
+                )
+
+            # Validate quantities are reasonable
+            MAX_QUANTITY = 10000  # 10kg in grams
+            for food in updates.foods:
+                if food.quantity_g > MAX_QUANTITY:
+                    raise ValueError(
+                        f"Quantidade muito alta: {food.quantity_g}g. Máximo permitido: {MAX_QUANTITY}g (10kg)"
+                    )
+
+            food_quantities = [
+                FoodQuantity(food_id=food.food_id, quantity=food.quantity_g)
+                for food in updates.foods
+            ]
+
+            totals, details = calculate_nutrition(session, food_quantities)
+
+            foods_dict = [
+                {
+                    "food_id": str(food.food_id),
+                    "quantity_g": float(food.quantity_g),
+                    "name": food.name or "",
+                }
+                for food in updates.foods
+            ]
+
+            meal_log.foods = foods_dict
+            meal_log.total_calories = float(totals.calories)
+            meal_log.total_protein_g = float(totals.protein_g)
+            meal_log.total_carbs_g = float(totals.carbs_g)
+            meal_log.total_fat_g = float(totals.fat_g)
+            meal_log.total_fiber_g = (
+                float(totals.fiber_g) if totals.fiber_g else None
+            )
+            meal_log.total_sodium_mg = (
+                float(totals.sodium_mg) if totals.sodium_mg else None
+            )
+
+        session.add(meal_log)
+        session.flush()
+
+        # Recalculate stats for both original and new dates (if date changed)
+        new_date = meal_log.consumed_at.date()
+        _update_daily_stats(session, user_id, original_date)
+        if new_date != original_date:
+            _update_daily_stats(session, user_id, new_date)
+
+        session.commit()
+        session.refresh(meal_log)
+
+        return meal_log
+    except Exception:
+        session.rollback()
+        raise
+
+
+def delete_meal(session: Session, meal_id: UUID, user_id: UUID) -> bool:
+    """
+    Delete a meal log entry
+
+    Args:
+        session: Database session
+        meal_id: ID of the meal log to delete
+        user_id: UUID of the authenticated user (for ownership validation)
+
+    Returns:
+        True if deleted, False if not found/unauthorized
+    """
+    # Get existing meal log
+    meal_log = session.get(MealLog, meal_id)
+
+    if not meal_log or meal_log.user_id != user_id:
+        return False
+
+    meal_date = meal_log.consumed_at.date()
+
+    try:
+        session.delete(meal_log)
+        session.flush()
+
+        # Recalculate daily stats for the date
+        _update_daily_stats(session, user_id, meal_date)
+
+        session.commit()
+        return True
+    except Exception:
+        session.rollback()
+        raise
 
 
 def get_daily_summary(
