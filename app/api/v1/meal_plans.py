@@ -1,6 +1,8 @@
+import io
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi.responses import StreamingResponse
 from sqlmodel import Session
 
 from app.api.dependencies import get_current_user_id, get_db
@@ -11,6 +13,7 @@ from app.schemas.meal_plan import (
     MealPlanUpdate,
 )
 from app.services import meal_plan_service
+from app.services.pdf_service import generate_meal_plan_pdf
 
 router = APIRouter()
 
@@ -116,3 +119,31 @@ async def delete_meal_plan(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Meal plan not found",
         )
+
+
+@router.get("/{plan_id}/pdf")
+async def export_meal_plan_pdf(
+    plan_id: UUID,
+    db: Session = Depends(get_db),
+    current_user_id: str = Depends(get_current_user_id),
+):
+    """
+    Export a meal plan as a PDF document.
+    """
+    meal_plan = meal_plan_service.get_meal_plan(db, plan_id, UUID(current_user_id))
+
+    if not meal_plan:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Meal plan not found",
+        )
+
+    pdf_bytes = generate_meal_plan_pdf(meal_plan)
+
+    filename = f"plano-alimentar-{meal_plan.plan_name.replace(' ', '-').lower()}.pdf"
+
+    return StreamingResponse(
+        io.BytesIO(pdf_bytes),
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )

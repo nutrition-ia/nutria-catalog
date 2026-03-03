@@ -19,6 +19,9 @@ PyJWT[crypto]>=2.8.0
 # Additional utilities
 python-multipart>=0.0.6
 
+# PDF Generation
+reportlab>=4.0.0
+
 # Computer Vision and Image Processing
 torch>=2.0.0  # PyTorch for deep learning
 torchvision>=0.15.0  # Vision models
