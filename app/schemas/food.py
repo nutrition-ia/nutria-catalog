@@ -239,7 +239,7 @@ class SimilarFoodsResponse(BaseModel):
     """Response schema for similar foods search"""
 
     success: bool = True
-    reference_food: FoodSimpleResponse
+    reference_food: Optional[FoodSimpleResponse] = None
     similar_foods: List[SimilarFoodItem]
     count: int
 
