@@ -44,6 +44,7 @@ async def create_user_profile(
             age=profile.age,
             weight_kg=profile.weight_kg,
             height_cm=profile.height_cm,
+            gender=profile.gender,
             activity_level=profile.activity_level,
             diet_goal=profile.diet_goal,
             dietary_restrictions=profile.dietary_restrictions or [],

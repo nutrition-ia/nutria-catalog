@@ -22,10 +22,10 @@ python-multipart>=0.0.6
 # PDF Generation
 reportlab>=4.0.0
 
-# Computer Vision and Image Processing
-torch>=2.0.0  # PyTorch for deep learning
-torchvision>=0.15.0  # Vision models
-detectron2 @ git+https://github.com/facebookresearch/detectron2.git  # DETIC base
-pillow>=10.0.0  # Image processing
-numpy>=1.24.0  # Array operations
-opencv-python>=4.8.0  # OpenCV for image processing
+# Computer Vision (DETIC) — desabilitado no MVP, requer GPU
+# torch>=2.0.0
+# torchvision>=0.15.0
+# detectron2 @ git+https://github.com/facebookresearch/detectron2.git
+# pillow>=10.0.0
+# numpy>=1.24.0
+# opencv-python>=4.8.0

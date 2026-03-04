@@ -37,6 +37,19 @@ LOW_SODIUM = Decimal("120")       # Baixo teor de sódio
 # Calorias (não é ANVISA oficial, mas útil)
 LOW_CALORIE = Decimal("40")       # Baixa caloria
 
+_model = None
+
+
+def _get_model() -> SentenceTransformer:
+    """Lazy singleton — carrega o modelo uma única vez."""
+    global _model
+    if _model is None:
+        logger.info("Carregando modelo SentenceTransformer (primeira chamada)...")
+        _model = SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2')
+        logger.info("Modelo carregado.")
+    return _model
+
+
 @profile
 def generate_embedding(text: str) -> List[float]:
     """
@@ -49,9 +62,9 @@ def generate_embedding(text: str) -> List[float]:
         Lista de floats representando o embedding das palavras
         ex: [0.123, -0.234, ..., 0.456]
     """
-    _model = SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2')
+    model = _get_model()
     try:
-        embedding = _model.encode(text, convert_to_numpy=True)
+        embedding = model.encode(text, convert_to_numpy=True)
         return embedding.tolist()
     except Exception as e:
         logger.error(f"Erro ao gerar embedding: {e}")

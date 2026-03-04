@@ -12,6 +12,7 @@ class UserProfileCreate(BaseModel):
     age: int = Field(..., ge=1, le=120, description="User's age")
     weight_kg: Optional[float] = Field(None, gt=0, description="Weight in kg")
     height_cm: Optional[float] = Field(None, gt=0, description="Height in cm")
+    gender: Optional[str] = Field(None, max_length=20, description="Gender (male, female, non_binary)")
     activity_level: Optional[str] = Field(
         "moderate",
         description="Activity level (sedentary, light, moderate, active, very_active)",
